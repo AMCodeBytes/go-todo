@@ -15,7 +15,7 @@ type Todos struct {
 
 type Todo struct {
 	Item      string `json:"item"`
-	Completed int    `json:"completed"`
+	Completed bool   `json:"completed"`
 }
 
 type model struct {
@@ -25,7 +25,7 @@ type model struct {
 }
 
 func initialModel() model {
-	file, err := os.Open("todo.json")
+	file, err := os.OpenFile("todo.json", os.O_RDWR|os.O_CREATE, 0644)
 
 	if err != nil {
 		// Failed to open the file, thus create a new blank file
@@ -43,6 +43,8 @@ func initialModel() model {
 
 	json.Unmarshal(byteValue, &todos)
 
+	defer file.Close()
+
 	return model{
 		choices:  todos.Todos,
 		selected: make(map[int]struct{}),
@@ -54,10 +56,42 @@ func (m model) Init() tea.Cmd {
 	return nil
 }
 
+func save(m model) {
+	b, err := json.Marshal(Todos{m.choices})
+
+	if err != nil {
+		panic("Failed to marshal JSON data")
+	}
+
+	file, err := os.OpenFile("todo.json", os.O_RDWR|os.O_CREATE, 0644)
+
+	if err != nil {
+		// Failed to open the file, thus create a new blank file
+		panic("Failed to open the file")
+	}
+
+	err = file.Truncate(0)
+
+	if err != nil {
+		panic("Failed to remove contents from the file")
+	}
+
+	_, err = file.Write(b)
+
+	if err != nil {
+		panic("Failed to write to the file")
+	}
+
+	defer file.Close()
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "ctrl+s":
+			// Save the file
+			save(m)
 		case "ctrl+c", "q":
 			return m, tea.Quit
 		case "up", "w":
@@ -69,11 +103,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 		case "enter", " ":
-			_, ok := m.selected[m.cursor]
-			if ok {
-				delete(m.selected, m.cursor)
+			// ok := m.choices[m.cursor].Completed
+			if m.choices[m.cursor].Completed {
+				m.choices[m.cursor].Completed = false
 			} else {
-				m.selected[m.cursor] = struct{}{}
+				m.choices[m.cursor].Completed = true
 			}
 		}
 	}
@@ -94,7 +128,7 @@ func (m model) View() string {
 		}
 
 		checked := " "
-		if _, ok := m.selected[i]; ok {
+		if ok := choice.Completed; ok {
 			checked = "x"
 		}
 
