@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
 
@@ -19,9 +20,11 @@ type Todo struct {
 }
 
 type model struct {
-	choices  []Todo           // items on the list
-	cursor   int              // which item our cursor is pointing at
-	selected map[int]struct{} // which items are selected
+	NewItem   bool
+	textInput textinput.Model
+	choices   []Todo           // items on the list
+	cursor    int              // which item our cursor is pointing at
+	selected  map[int]struct{} // which items are selected
 }
 
 func initialModel() model {
@@ -85,6 +88,20 @@ func save(m model) {
 	defer file.Close()
 }
 
+func newTodo(m model) model {
+	ti := textinput.New()
+	ti.Placeholder = "Enter todo item here..."
+	ti.Focus()
+	ti.CharLimit = 156
+	ti.Width = 20
+
+	return model{
+		textInput: ti,
+		choices:   m.choices,
+		cursor:    m.cursor,
+	}
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -92,18 +109,21 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "ctrl+s":
 			// Save the file
 			save(m)
-		case "ctrl+c", "q":
+		case "ctrl+c":
 			return m, tea.Quit
-		case "up", "w":
+		case "up":
 			if m.cursor > 0 {
 				m.cursor--
 			}
-		case "down", "s":
+		case "down":
 			if m.cursor < len(m.choices)-1 {
 				m.cursor++
 			}
 		case "delete":
 			m.choices = append(m.choices[:m.cursor], m.choices[m.cursor+1:]...)
+		case "ctrl+n":
+			m.NewItem = true
+			// newTodo(m)
 		case "enter", " ":
 			// ok := m.choices[m.cursor].Completed
 			if m.choices[m.cursor].Completed {
@@ -139,7 +159,9 @@ func (m model) View() string {
 	}
 
 	// Footer
-	s += "\n Press q to quit.\n"
+	s += "\n Press ctrl+c to quit.\n"
+
+	s += fmt.Sprintf("%v", m.NewItem)
 
 	// Send UI to be rendered
 	return s
