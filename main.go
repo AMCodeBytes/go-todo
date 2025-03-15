@@ -102,6 +102,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.cursor < len(m.choices)-1 {
 				m.cursor++
 			}
+		case "delete":
+			m.choices = append(m.choices[:m.cursor], m.choices[m.cursor+1:]...)
 		case "enter", " ":
 			// ok := m.choices[m.cursor].Completed
 			if m.choices[m.cursor].Completed {
