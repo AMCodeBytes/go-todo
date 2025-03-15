@@ -1,21 +1,50 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
+type Todos struct {
+	Todos []Todo `json:"todos"`
+}
+
+type Todo struct {
+	Item      string `json:"item"`
+	Completed int    `json:"completed"`
+}
+
 type model struct {
-	choices  []string         // items on the list
+	choices  []Todo           // items on the list
 	cursor   int              // which item our cursor is pointing at
 	selected map[int]struct{} // which items are selected
 }
 
 func initialModel() model {
+	file, err := os.Open("todo.json")
+
+	if err != nil {
+		// Failed to open the file, thus create a new blank file
+		panic("Failed to open the file")
+	}
+
+	byteValue, err := io.ReadAll(file)
+
+	if err != nil {
+		// Issue reading the file
+		panic("Failed to read the file")
+	}
+
+	var todos Todos
+
+	json.Unmarshal(byteValue, &todos)
+
 	return model{
-		choices:  []string{"Practice coding in GO", "Improve my video editing", "Clean my desk"},
+		choices:  todos.Todos,
 		selected: make(map[int]struct{}),
 	}
 }
@@ -70,7 +99,7 @@ func (m model) View() string {
 		}
 
 		// Render the row
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice)
+		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice.Item)
 	}
 
 	// Footer
