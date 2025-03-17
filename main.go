@@ -48,9 +48,17 @@ func initialModel() model {
 
 	defer file.Close()
 
+	ti := textinput.New()
+	ti.Placeholder = "Enter todo item here..."
+	ti.Focus()
+	ti.CharLimit = 156
+	ti.Width = 50
+	ti.Cursor.Blink = true
+
 	return model{
-		choices:  todos.Todos,
-		selected: make(map[int]struct{}),
+		textInput: ti,
+		choices:   todos.Todos,
+		selected:  make(map[int]struct{}),
 	}
 }
 
@@ -88,21 +96,9 @@ func save(m model) {
 	defer file.Close()
 }
 
-func newTodo(m model) model {
-	ti := textinput.New()
-	ti.Placeholder = "Enter todo item here..."
-	ti.Focus()
-	ti.CharLimit = 156
-	ti.Width = 20
-
-	return model{
-		textInput: ti,
-		choices:   m.choices,
-		cursor:    m.cursor,
-	}
-}
-
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -122,49 +118,70 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "delete":
 			m.choices = append(m.choices[:m.cursor], m.choices[m.cursor+1:]...)
 		case "ctrl+n":
-			m.NewItem = true
+			m.NewItem = !m.NewItem
 			// newTodo(m)
-		case "enter", " ":
+		case "tab":
 			// ok := m.choices[m.cursor].Completed
 			if m.choices[m.cursor].Completed {
 				m.choices[m.cursor].Completed = false
 			} else {
 				m.choices[m.cursor].Completed = true
 			}
+		case "enter":
+			if m.NewItem {
+				var todo Todo
+				todo.Item = m.textInput.Value()
+				todo.Completed = false
+
+				m.choices = append(m.choices, todo)
+				m.NewItem = !m.NewItem
+			}
 		}
+	}
+
+	if m.NewItem {
+		m.textInput, cmd = m.textInput.Update(msg)
+		return m, cmd
 	}
 
 	return m, nil
 }
 
 func (m model) View() string {
-	// The View function is also where you could use Lip Gloss to style the view
-	// Header
-	s := "What do I need to do?\n\n"
+	if m.NewItem {
+		return fmt.Sprintf(
+			"What is the new item you wish to enter?\n\n%s\n\n%s",
+			m.textInput.View(),
+			"(Press ctrl+c to quit)",
+		) + "\n"
+	} else {
+		// The View function is also where you could use Lip Gloss to style the view
+		// Header
+		s := "What do I need to do?\n\n"
 
-	for i, choice := range m.choices {
-		cursor := " "
+		for i, choice := range m.choices {
+			cursor := " "
 
-		if m.cursor == i {
-			cursor = ">"
+			if m.cursor == i {
+				cursor = ">"
+			}
+
+			checked := " "
+			if ok := choice.Completed; ok {
+				checked = "x"
+			}
+
+			// Render the row
+			s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice.Item)
 		}
 
-		checked := " "
-		if ok := choice.Completed; ok {
-			checked = "x"
-		}
+		// Footer
+		s += "\n (Press ctrl+c to quit)\n"
 
-		// Render the row
-		s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice.Item)
+		// Send UI to be rendered
+		return s
 	}
 
-	// Footer
-	s += "\n Press ctrl+c to quit.\n"
-
-	s += fmt.Sprintf("%v", m.NewItem)
-
-	// Send UI to be rendered
-	return s
 }
 
 func main() {
