@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -21,6 +22,7 @@ type Todo struct {
 
 type model struct {
 	NewItem   bool
+	table     table.Model
 	textInput textinput.Model
 	choices   []Todo           // items on the list
 	cursor    int              // which item our cursor is pointing at
@@ -122,6 +124,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.choices = append(m.choices[:m.cursor], m.choices[m.cursor+1:]...)
 		case "alt+h":
 			m.help = !m.help
+
+			if m.help {
+				m.table.Focus()
+			} else {
+				m.table.Blur()
+			}
 		case "ctrl+n":
 			m.NewItem = !m.NewItem
 		case "tab":
@@ -150,6 +158,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 	}
 
+	if m.help {
+		m.table, cmd = m.table.Update(msg)
+		return m, cmd
+	}
+
 	return m, nil
 }
 
@@ -161,16 +174,31 @@ func (m model) View() string {
 			"(Press ctrl+c to quit)",
 		) + "\n"
 	} else if m.help {
-		s := "What do I need to do? (alt+h to close help)\n\n"
-		s += "ctrl+s | Save the todo list\n"
-		s += "ctrl+c | Quit the app\n"
-		s += "up | Move up the list\n"
-		s += "down | Move down the list\n"
-		s += "delete | Delete item from the todo list\n"
-		s += "alt+h | Toggle the help commands\n"
-		s += "ctrl+n | Toggle create new todo item input\n"
-		s += "tab | Complete a todo item\n"
-		s += "enter | Submit the text input\n"
+		columns := []table.Column{
+			{Title: "command", Width: 10},
+			{Title: "Description", Width: 35},
+		}
+
+		rows := []table.Row{
+			{"ctrl+s", "Save the todo list"},
+			{"ctrl+c", "Quit the app"},
+			{"ctrl+n", "Toggle create new todo item input"},
+			{"alt+h", "Toggle the help commands"},
+			{"up", "Move up the list"},
+			{"down", "Move down the list"},
+			{"tab", "Complete a todo item"},
+			{"delete", "Delete item from the todo list"},
+			{"enter", "Submit the text input"},
+		}
+
+		t := table.New(
+			table.WithColumns(columns),
+			table.WithRows(rows),
+			table.WithFocused(true),
+			table.WithHeight(9),
+		)
+		m := model{table: t}
+		s := m.table.View()
 		return s
 	} else {
 		// The View function is also where you could use Lip Gloss to style the view
