@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type Todos struct {
@@ -19,6 +20,10 @@ type Todo struct {
 	Item      string `json:"item"`
 	Completed bool   `json:"completed"`
 }
+
+var baseStyle = lipgloss.NewStyle().
+	BorderStyle(lipgloss.NormalBorder()).
+	BorderForeground(lipgloss.Color("240"))
 
 type model struct {
 	NewItem   bool
@@ -175,7 +180,7 @@ func (m model) View() string {
 		) + "\n"
 	} else if m.help {
 		columns := []table.Column{
-			{Title: "command", Width: 10},
+			{Title: "Commands", Width: 10},
 			{Title: "Description", Width: 35},
 		}
 
@@ -195,10 +200,25 @@ func (m model) View() string {
 			table.WithColumns(columns),
 			table.WithRows(rows),
 			table.WithFocused(true),
-			table.WithHeight(9),
+			table.WithHeight(10),
 		)
+
+		style := table.DefaultStyles()
+
+		style.Header = style.Header.
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(lipgloss.Color("240")).
+			BorderBottom(true).
+			Bold(false)
+
+		style.Selected = style.Selected.
+			Foreground(lipgloss.Color("229")).
+			Background(lipgloss.Color("57")).
+			Bold(false)
+		t.SetStyles(style)
+
 		m := model{table: t}
-		s := m.table.View()
+		s := baseStyle.Render(m.table.View()) + "\n"
 		return s
 	} else {
 		// The View function is also where you could use Lip Gloss to style the view
