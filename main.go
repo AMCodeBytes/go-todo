@@ -25,6 +25,7 @@ type model struct {
 	choices   []Todo           // items on the list
 	cursor    int              // which item our cursor is pointing at
 	selected  map[int]struct{} // which items are selected
+	help      bool             // display commands when this is true
 }
 
 func initialModel() model {
@@ -59,6 +60,8 @@ func initialModel() model {
 		textInput: ti,
 		choices:   todos.Todos,
 		selected:  make(map[int]struct{}),
+		NewItem:   false,
+		help:      false,
 	}
 }
 
@@ -117,9 +120,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "delete":
 			m.choices = append(m.choices[:m.cursor], m.choices[m.cursor+1:]...)
+		case "alt+h":
+			m.help = !m.help
 		case "ctrl+n":
 			m.NewItem = !m.NewItem
-			// newTodo(m)
 		case "tab":
 			// ok := m.choices[m.cursor].Completed
 			if m.choices[m.cursor].Completed {
@@ -135,6 +139,8 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 				m.choices = append(m.choices, todo)
 				m.NewItem = !m.NewItem
+
+				m.textInput.SetValue("")
 			}
 		}
 	}
@@ -154,10 +160,22 @@ func (m model) View() string {
 			m.textInput.View(),
 			"(Press ctrl+c to quit)",
 		) + "\n"
+	} else if m.help {
+		s := "What do I need to do? (alt+h to close help)\n\n"
+		s += "ctrl+s | Save the todo list\n"
+		s += "ctrl+c | Quit the app\n"
+		s += "up | Move up the list\n"
+		s += "down | Move down the list\n"
+		s += "delete | Delete item from the todo list\n"
+		s += "alt+h | Toggle the help commands\n"
+		s += "ctrl+n | Toggle create new todo item input\n"
+		s += "tab | Complete a todo item\n"
+		s += "enter | Submit the text input\n"
+		return s
 	} else {
 		// The View function is also where you could use Lip Gloss to style the view
 		// Header
-		s := "What do I need to do?\n\n"
+		s := "What do I need to do? (ctrl+h for help)\n\n"
 
 		for i, choice := range m.choices {
 			cursor := " "
@@ -181,7 +199,6 @@ func (m model) View() string {
 		// Send UI to be rendered
 		return s
 	}
-
 }
 
 func main() {
