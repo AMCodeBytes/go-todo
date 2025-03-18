@@ -105,31 +105,7 @@ func (m model) View() string {
 	} else if m.Help {
 		return views.HelpView()
 	} else {
-		// The View function is also where you could use Lip Gloss to style the view
-		// Header
-		s := "What do I need to do? (ctrl+h for help)\n\n"
-
-		for i, choice := range m.Choices {
-			cursor := " "
-
-			if m.Cursor == i {
-				cursor = ">"
-			}
-
-			checked := " "
-			if ok := choice.Completed; ok {
-				checked = "x"
-			}
-
-			// Render the row
-			s += fmt.Sprintf("%s [%s] %s\n", cursor, checked, choice.Item)
-		}
-
-		// Footer
-		s += "\n (Press ctrl+c to quit)\n"
-
-		// Send UI to be rendered
-		return s
+		return views.TodoView(m.Choices, m.Cursor)
 	}
 }
 
