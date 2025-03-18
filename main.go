@@ -6,34 +6,11 @@ import (
 	"go-todo/views"
 	"os"
 
-	"github.com/charmbracelet/bubbles/table"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
 )
 
-// type Todos struct {
-// 	Todos []Todo `json:"todos"`
-// }
-
-// type Todo struct {
-// 	Item      string `json:"item"`
-// 	Completed bool   `json:"completed"`
-// }
-
-var baseStyle = lipgloss.NewStyle().
-	BorderStyle(lipgloss.NormalBorder()).
-	BorderForeground(lipgloss.Color("240"))
-
-type model struct {
-	NewItem   bool
-	table     table.Model
-	textInput textinput.Model
-	choices   []models.Todo    // items on the list
-	cursor    int              // which item our cursor is pointing at
-	selected  map[int]struct{} // which items are selected
-	help      bool             // display commands when this is true
-}
+type model models.Model
 
 func initialModel() model {
 	ti := textinput.New()
@@ -44,11 +21,11 @@ func initialModel() model {
 	ti.Cursor.Blink = true
 
 	return model{
-		textInput: ti,
-		choices:   models.GetTodos(),
-		selected:  make(map[int]struct{}),
+		TextInput: ti,
+		Choices:   models.GetTodos(),
+		Selected:  make(map[int]struct{}),
 		NewItem:   false,
-		help:      false,
+		Help:      false,
 	}
 }
 
@@ -65,57 +42,57 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+s":
 			// Save the file
-			models.SaveTodo(m.choices)
+			models.SaveTodo(m.Choices)
 		case "ctrl+c":
 			return m, tea.Quit
 		case "up":
-			if m.cursor > 0 {
-				m.cursor--
+			if m.Cursor > 0 {
+				m.Cursor--
 			}
 		case "down":
-			if m.cursor < len(m.choices)-1 {
-				m.cursor++
+			if m.Cursor < len(m.Choices)-1 {
+				m.Cursor++
 			}
 		case "delete":
-			m.choices = append(m.choices[:m.cursor], m.choices[m.cursor+1:]...)
+			m.Choices = append(m.Choices[:m.Cursor], m.Choices[m.Cursor+1:]...)
 		case "alt+h":
-			m.help = !m.help
+			m.Help = !m.Help
 
-			if m.help {
-				m.table.Focus()
+			if m.Help {
+				m.Table.Focus()
 			} else {
-				m.table.Blur()
+				m.Table.Blur()
 			}
 		case "ctrl+n":
 			m.NewItem = !m.NewItem
 		case "tab":
 			// ok := m.choices[m.cursor].Completed
-			if m.choices[m.cursor].Completed {
-				m.choices[m.cursor].Completed = false
+			if m.Choices[m.Cursor].Completed {
+				m.Choices[m.Cursor].Completed = false
 			} else {
-				m.choices[m.cursor].Completed = true
+				m.Choices[m.Cursor].Completed = true
 			}
 		case "enter":
 			if m.NewItem {
 				var todo models.Todo
-				todo.Item = m.textInput.Value()
+				todo.Item = m.TextInput.Value()
 				todo.Completed = false
 
-				m.choices = append(m.choices, todo)
+				m.Choices = append(m.Choices, todo)
 				m.NewItem = !m.NewItem
 
-				m.textInput.SetValue("")
+				m.TextInput.SetValue("")
 			}
 		}
 	}
 
 	if m.NewItem {
-		m.textInput, cmd = m.textInput.Update(msg)
+		m.TextInput, cmd = m.TextInput.Update(msg)
 		return m, cmd
 	}
 
-	if m.help {
-		m.table, cmd = m.table.Update(msg)
+	if m.Help {
+		m.Table, cmd = m.Table.Update(msg)
 		return m, cmd
 	}
 
@@ -124,58 +101,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if m.NewItem {
-		return views.NewTodoView(m.textInput.View())
-	} else if m.help {
-		columns := []table.Column{
-			{Title: "Commands", Width: 10},
-			{Title: "Description", Width: 35},
-		}
-
-		rows := []table.Row{
-			{"ctrl+s", "Save the todo list"},
-			{"ctrl+c", "Quit the app"},
-			{"ctrl+n", "Toggle create new todo item input"},
-			{"alt+h", "Toggle the help commands"},
-			{"up", "Move up the list"},
-			{"down", "Move down the list"},
-			{"tab", "Complete a todo item"},
-			{"delete", "Delete item from the todo list"},
-			{"enter", "Submit the text input"},
-		}
-
-		t := table.New(
-			table.WithColumns(columns),
-			table.WithRows(rows),
-			table.WithFocused(true),
-			table.WithHeight(10),
-		)
-
-		style := table.DefaultStyles()
-
-		style.Header = style.Header.
-			BorderStyle(lipgloss.NormalBorder()).
-			BorderForeground(lipgloss.Color("240")).
-			BorderBottom(true).
-			Bold(false)
-
-		style.Selected = style.Selected.
-			Foreground(lipgloss.Color("229")).
-			Background(lipgloss.Color("57")).
-			Bold(false)
-		t.SetStyles(style)
-
-		m := model{table: t}
-		s := baseStyle.Render(m.table.View()) + "\n"
-		return s
+		return views.NewTodoView(m.TextInput.View())
+	} else if m.Help {
+		return views.HelpView()
 	} else {
 		// The View function is also where you could use Lip Gloss to style the view
 		// Header
 		s := "What do I need to do? (ctrl+h for help)\n\n"
 
-		for i, choice := range m.choices {
+		for i, choice := range m.Choices {
 			cursor := " "
 
-			if m.cursor == i {
+			if m.Cursor == i {
 				cursor = ">"
 			}
 
