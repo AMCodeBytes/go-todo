@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"go-todo/models"
+	"go-todo/views"
 	"os"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -35,26 +36,6 @@ type model struct {
 }
 
 func initialModel() model {
-	// file, err := os.OpenFile("todo.json", os.O_RDWR|os.O_CREATE, 0644)
-
-	// if err != nil {
-	// 	// Failed to open the file, thus create a new blank file
-	// 	panic("Failed to open the file")
-	// }
-
-	// byteValue, err := io.ReadAll(file)
-
-	// if err != nil {
-	// 	// Issue reading the file
-	// 	panic("Failed to read the file")
-	// }
-
-	// var todos models.Todos
-
-	// json.Unmarshal(byteValue, &todos)
-
-	// defer file.Close()
-
 	ti := textinput.New()
 	ti.Placeholder = "Enter todo item here..."
 	ti.Focus()
@@ -143,11 +124,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m model) View() string {
 	if m.NewItem {
-		return fmt.Sprintf(
-			"What is the new item you wish to enter?\n\n%s\n\n%s",
-			m.textInput.View(),
-			"(Press ctrl+c to quit)",
-		) + "\n"
+		return views.NewTodoView(m.textInput.View())
 	} else if m.help {
 		columns := []table.Column{
 			{Title: "Commands", Width: 10},
