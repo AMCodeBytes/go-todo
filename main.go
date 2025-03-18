@@ -1,9 +1,8 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
+	"go-todo/models"
 	"os"
 
 	"github.com/charmbracelet/bubbles/table"
@@ -12,14 +11,14 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-type Todos struct {
-	Todos []Todo `json:"todos"`
-}
+// type Todos struct {
+// 	Todos []Todo `json:"todos"`
+// }
 
-type Todo struct {
-	Item      string `json:"item"`
-	Completed bool   `json:"completed"`
-}
+// type Todo struct {
+// 	Item      string `json:"item"`
+// 	Completed bool   `json:"completed"`
+// }
 
 var baseStyle = lipgloss.NewStyle().
 	BorderStyle(lipgloss.NormalBorder()).
@@ -29,32 +28,32 @@ type model struct {
 	NewItem   bool
 	table     table.Model
 	textInput textinput.Model
-	choices   []Todo           // items on the list
+	choices   []models.Todo    // items on the list
 	cursor    int              // which item our cursor is pointing at
 	selected  map[int]struct{} // which items are selected
 	help      bool             // display commands when this is true
 }
 
 func initialModel() model {
-	file, err := os.OpenFile("todo.json", os.O_RDWR|os.O_CREATE, 0644)
+	// file, err := os.OpenFile("todo.json", os.O_RDWR|os.O_CREATE, 0644)
 
-	if err != nil {
-		// Failed to open the file, thus create a new blank file
-		panic("Failed to open the file")
-	}
+	// if err != nil {
+	// 	// Failed to open the file, thus create a new blank file
+	// 	panic("Failed to open the file")
+	// }
 
-	byteValue, err := io.ReadAll(file)
+	// byteValue, err := io.ReadAll(file)
 
-	if err != nil {
-		// Issue reading the file
-		panic("Failed to read the file")
-	}
+	// if err != nil {
+	// 	// Issue reading the file
+	// 	panic("Failed to read the file")
+	// }
 
-	var todos Todos
+	// var todos models.Todos
 
-	json.Unmarshal(byteValue, &todos)
+	// json.Unmarshal(byteValue, &todos)
 
-	defer file.Close()
+	// defer file.Close()
 
 	ti := textinput.New()
 	ti.Placeholder = "Enter todo item here..."
@@ -65,7 +64,7 @@ func initialModel() model {
 
 	return model{
 		textInput: ti,
-		choices:   todos.Todos,
+		choices:   models.GetTodos(),
 		selected:  make(map[int]struct{}),
 		NewItem:   false,
 		help:      false,
@@ -77,35 +76,6 @@ func (m model) Init() tea.Cmd {
 	return nil
 }
 
-func save(m model) {
-	b, err := json.Marshal(Todos{m.choices})
-
-	if err != nil {
-		panic("Failed to marshal JSON data")
-	}
-
-	file, err := os.OpenFile("todo.json", os.O_RDWR|os.O_CREATE, 0644)
-
-	if err != nil {
-		// Failed to open the file, thus create a new blank file
-		panic("Failed to open the file")
-	}
-
-	err = file.Truncate(0)
-
-	if err != nil {
-		panic("Failed to remove contents from the file")
-	}
-
-	_, err = file.Write(b)
-
-	if err != nil {
-		panic("Failed to write to the file")
-	}
-
-	defer file.Close()
-}
-
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 
@@ -114,7 +84,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+s":
 			// Save the file
-			save(m)
+			models.SaveTodo(m.choices)
 		case "ctrl+c":
 			return m, tea.Quit
 		case "up":
@@ -146,7 +116,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		case "enter":
 			if m.NewItem {
-				var todo Todo
+				var todo models.Todo
 				todo.Item = m.textInput.Value()
 				todo.Completed = false
 
